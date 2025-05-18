@@ -1,91 +1,70 @@
-const connection = require('../services/db');
+const clienteService = require('../services/clienteService');
 const NodeCache = require('node-cache');
-const cache = new NodeCache({ stdTTL: 60 * 5 }); // cache válido por 5 minutos
+const chalk = require('chalk');
 
-// Função para logs coloridos no console
-function logCache(foiCache) {
-  if (foiCache) {
-    console.log('\x1b[32m%s\x1b[0m', '[CACHE] Resposta veio do cache');
-  } else {
-    console.log('\x1b[33m%s\x1b[0m', '[DB] Resposta veio do banco');
-  }
-}
+const cache = new NodeCache({ stdTTL: 30 }); // cache com tempo de vida de 30 segundos
 
-// Buscar todos os clientes (GET) com cache
-exports.getAllClientes = async (req, res) => {
+const getAllClientes = async (req, res) => {
   try {
-    const cachedClientes = cache.get('clientes');
-    if (cachedClientes) {
-      logCache(true);
-      return res.json(cachedClientes);
+    const cacheKey = 'clientes';
+    const cachedData = cache.get(cacheKey);
+
+    if (cachedData) {
+      console.log(chalk.blue('[CACHE] Lista de clientes retornada do cache.'));
+      return res.json(cachedData);
     }
 
-    const [results] = await connection.query('SELECT * FROM clientes');
-    cache.set('clientes', results);
-    logCache(false);
-    res.json(results);
-  } catch (err) {
-    console.error('Erro ao buscar clientes:', err);
-    res.status(500).send('Erro no servidor');
+    const clientes = await clienteService.buscarTodos();
+    cache.set(cacheKey, clientes);
+    console.log(chalk.green('[DB] Lista de clientes buscada do banco de dados.'));
+    res.json(clientes);
+  } catch (error) {
+    console.error(chalk.red('Erro ao buscar clientes:'), error);
+    res.status(500).json({ error: 'Erro ao buscar clientes' });
   }
 };
 
-// Criar cliente (POST) + limpar cache
-exports.createCliente = async (req, res) => {
-  const { nome, sobrenome, email, idade } = req.body;
-
-  if (!nome || !sobrenome || !email || !idade) {
-    return res.status(400).json({ erro: 'Todos os campos são obrigatórios.' });
-  }
-
+const createCliente = async (req, res) => {
   try {
-    const query = 'INSERT INTO clientes (nome, sobrenome, email, idade) VALUES (?, ?, ?, ?)';
-    const [result] = await connection.query(query, [nome, sobrenome, email, idade]);
-
-    cache.del('clientes'); // Limpa cache
-
-    res.status(201).json({ id: result.insertId, nome, sobrenome, email, idade });
-  } catch (err) {
-    console.error('Erro ao criar cliente:', err);
-    res.status(500).send('Erro no servidor');
+    const cliente = await clienteService.criarCliente(req.body);
+    cache.del('clientes'); // Invalida cache após modificação
+    console.log(chalk.yellow('[CACHE INVALIDADO] após criação de cliente.'));
+    res.status(201).json(cliente);
+  } catch (error) {
+    console.error(chalk.red('Erro ao criar cliente:'), error);
+    res.status(500).json({ error: 'Erro ao criar cliente' });
   }
 };
 
-// Atualizar cliente (PUT) + limpar cache
-exports.updateCliente = async (req, res) => {
-  const { id } = req.params;
-  const { nome, sobrenome, email, idade } = req.body;
-
-  if (!nome || !sobrenome || !email || !idade) {
-    return res.status(400).json({ erro: 'Todos os campos são obrigatórios.' });
-  }
-
+const updateCliente = async (req, res) => {
   try {
-    const query = 'UPDATE clientes SET nome = ?, sobrenome = ?, email = ?, idade = ? WHERE id = ?';
-    await connection.query(query, [nome, sobrenome, email, idade, id]);
-
-    cache.del('clientes'); // Limpa cache
-
-    res.json({ mensagem: 'Cliente atualizado com sucesso!' });
-  } catch (err) {
-    console.error('Erro ao atualizar cliente:', err);
-    res.status(500).send('Erro no servidor');
+    const id = req.params.id;
+    const cliente = await clienteService.atualizarCliente(id, req.body);
+    cache.del('clientes'); // Invalida cache após modificação
+    console.log(chalk.yellow('[CACHE INVALIDADO] após atualização de cliente.'));
+    res.json(cliente);
+  } catch (error) {
+    console.error(chalk.red('Erro ao atualizar cliente:'), error);
+    res.status(500).json({ error: 'Erro ao atualizar cliente' });
   }
 };
 
-// Deletar cliente (DELETE) + limpar cache
-exports.deleteCliente = async (req, res) => {
-  const { id } = req.params;
-
+const deleteCliente = async (req, res) => {
   try {
-    const query = 'DELETE FROM clientes WHERE id = ?';
-    await connection.query(query, [id]);
-
-    cache.del('clientes'); // Limpa cache
-
-    res.json({ mensagem: 'Cliente deletado com sucesso!' });
-  } catch (err) {
-    console.error('Erro ao deletar cliente:', err);
-    res.status(500).send('Erro no servidor');
+    const id = req.params.id;
+    await clienteService.deletarCliente(id);
+    cache.del('clientes'); // Invalida cache após modificação
+    console.log(chalk.yellow('[CACHE INVALIDADO] após exclusão de cliente.'));
+    res.status(204).send();
+  } catch (error) {
+    console.error(chalk.red('Erro ao deletar cliente:'), error);
+    res.status(500).json({ error: 'Erro ao deletar cliente' });
   }
+};
+
+module.exports = {
+  getAllClientes,
+  createCliente,
+  updateCliente,
+  deleteCliente,
 };

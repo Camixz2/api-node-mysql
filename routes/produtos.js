@@ -3,7 +3,7 @@ const router = express.Router();
 const produtosController = require('../controllers/produtosController');
 const jwt = require('jsonwebtoken');
 
-const SECRET = 'Backend-II'; // segredo para validar o token JWT
+const SECRET = 'Backend'; // secret para validar o token JWT
 
 // Middleware para validar token JWT
 function verifyJWT(req, res, next) {

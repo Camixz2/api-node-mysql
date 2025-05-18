@@ -2,7 +2,7 @@ const connection = require('../services/db');
 const NodeCache = require('node-cache');
 const cache = new NodeCache({ stdTTL: 60 * 5 }); // cache válido por 5 minutos
 
-// Função para logs coloridos no console
+// Logs coloridas no console
 function logCache(foiCache) {
   if (foiCache) {
     console.log('\x1b[32m%s\x1b[0m', '[CACHE] Resposta veio do cache (produtos)');
@@ -30,7 +30,7 @@ exports.getAllProdutos = async (req, res) => {
   }
 };
 
-// Criar produto (POST) + limpar cache
+// Criar produto POST + limpar cache
 exports.createProduto = async (req, res) => {
   const { nome, descricao, preco, quantidade } = req.body;
 

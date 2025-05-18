@@ -1,20 +1,24 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const router = express.Router();
+const usuarioService = require('../services/usuarioService');
 
-const secret = 'Backend-II'; //chave para JWT
+const secret = 'Backend-II';
 
-router.post('/', (req, res) => {
-    const { user, password } = req.body;
+router.post('/', async (req, res) => {
+    const { email, senha } = req.body;
 
-    if (user === 'Luke' && password === '1234') {
-        const token = jwt.sign({ id: 1 }, secret, { expiresIn: 300 }); // token válido 5 min
-        return res.json({ auth: true, token });
+    const usuario = await usuarioService.buscarPorEmail(email);
+    if (!usuario) {
+        return res.status(401).json({ auth: false, message: 'Usuário não encontrado' });
     }
 
-    res.status(401).json({ auth: false, message: 'Login inválido' });
+    if (usuario.senha !== senha) {
+        return res.status(401).json({ auth: false, message: 'Senha incorreta' });
+    }
+
+    const token = jwt.sign({ id: usuario.id }, secret, { expiresIn: 300 }); // 5 minutos
+    res.json({ auth: true, token });
 });
 
 module.exports = router;
-
-
