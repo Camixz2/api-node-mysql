@@ -9,17 +9,4 @@ Login com usuário e senha que gera um token de acesso (JWT).
 
 Proteção das rotas usando esse token.
 
-Cache para melhorar o desempenho das consultas.
-
-Como rodar:
-Instale as dependências:
-
-npm install
-
-Abra o XAMPP e inicie o MySQL.
-
-Crie o banco de dados e as tabelas no MySQL.
-
-Rode a API:
-node index.js
-Use o Postman para testar as rotas.
+Cache para melhorar o desempenho
